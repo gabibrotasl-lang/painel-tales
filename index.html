@@ -1,184 +1,204 @@
-Você é a IA oficial do Painel Tales, um sistema profissional de gestão de pedidos de lanchonete.
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Painel Tales PRO</title>
 
-Sua função é interpretar mensagens de clientes e gerar pedidos perfeitos, estruturados, calculados e prontos para impressão térmica.
+<style>
+body{font-family:Arial;background:#0f0f0f;color:#fff;padding:20px}
+h1{color:#ff7a00}
+textarea{width:100%;height:120px;border-radius:10px;padding:10px;font-size:16px}
+button{background:#ff7a00;border:none;padding:12px 20px;border-radius:10px;font-weight:bold;margin:5px;cursor:pointer}
+.card{background:#1a1a1a;padding:15px;border-radius:12px;margin-top:15px}
+.total{font-size:22px;color:#ff7a00;font-weight:bold}
+.linhaPreco{color:#aaa;font-size:13px}
+.add{color:#7CFC00}
+.rem{color:#aaa}
+.small{color:#aaa;font-size:13px}
+</style>
+</head>
 
-========================
-🧠 MODO INTELIGENTE (HARD)
-========================
+<body>
 
-Entender mensagens confusas, abreviações, erros de digitação e linguagem informal.
+<h1>Painel Tales</h1>
 
-Detectar automaticamente:
-- itens
-- quantidades
-- adicionais
-- remoções
-- bebidas
-- observações
-- endereço
-- entrega
+<div class="card">
+<h3>Mensagem cliente</h3>
+<textarea id="msg"></textarea><br>
+<button onclick="colar()">📋 Colar</button>
+<button onclick="processar()">🤖 Processar IA</button>
+<button onclick="entrega()">🚚 Entrega +7</button>
+<button onclick="entregaCustom()">✏️ Entrega valor</button>
+<button onclick="retirada()">🏠 Retirada</button>
+<button onclick="imprimir()">🧾 Imprimir</button>
+</div>
 
-Nunca duplicar item sem intenção clara.
+<div class="card">
+<h3>Pedido</h3>
+<div id="pedido"></div>
+<div id="endereco" class="small"></div>
+<div id="total" class="total"></div>
+</div>
 
-========================
-📦 INTERPRETAÇÃO DE PEDIDO
-========================
+<script>
+let numeroPedido=1;
 
-Detectar quantidade por:
-- número
-- texto (dois, três…)
-- repetição
-- “mais um”
-- “outro”
-- “igual”
+const cardapio=[
+["frango bacon catupiry",38],["frango bacon",34],["frango catupiry",34],["frango cheddar",34],["frango tudo",37],
+["da casa",40],["bacon catupiry",35],["burgão bacon",32],["salada bacon",31],["bauru acebolado",37],
+["americano",29],["acebolado",28],["azeitonado",27],["bacon",30],["burgão",24],["burguer",22],
+["catupiry",35],["cheddar",27],["salada",24],["milho",26],["tudo",37],["frango",28],
+["bauru",35],["misto",22],["calabresa",29],["vegetariano",25],["brocolis",29],
+["coca 2l",15],["coca 1l",9],["coca lata",7],["fanta laranja",7],["fanta uva",7],
+["sprite",7],["guarana 2l",15],["guarana 1l",9],["guarana",7],["dell vale",8]
+];
 
-Separar modificações por item.
+const adicionais={"bacon":7,"catupiry":7,"alface":2,"queijo":7,"ovo":2,"hamburguer":6,"milho":2,"azeitona":2,"maionese":1,"cebola":2,"frango":6};
 
-Ex:
-2 tudo um sem milho outro com bacon
-→ gerar dois itens diferentes.
+let itens=[];
+let total=0;
+let entregaValor=0;
+let endereco="";
 
-========================
-➕ ADICIONAIS
-========================
+function colar(){navigator.clipboard.readText().then(t=>msg.value=t)}
 
-Palavras de adicionar:
-com, acrescenta, coloca, adicional, +
+function detectarEndereco(txt){
+let linhas=txt.split("\n");
+for(let l of linhas){
+if(l.match(/rua|av|avenida|travessa/i)&&l.match(/\d+/)) return l;
+}
+return "";
+}
 
-Somar valor do adicional ao item.
+function acharQtd(txt,pos){
+let antes=txt.substring(Math.max(0,pos-6),pos);
+let m=antes.match(/(\d+)/);
+return m?parseInt(m[1]):1;
+}
 
-Nunca cobrar ingrediente base duas vezes.
+function processar(){
+itens=[];total=0;
 
-Sugestão inteligente:
-Se cliente pedir lanche simples → sugerir adicional comum (modo sugestão).
+let txt=msg.value.toLowerCase();
+endereco=detectarEndereco(txt);
 
-========================
-➖ REMOÇÕES
-========================
+for(let [nome,preco] of cardapio){
 
-Palavras:
-sem, tira, retirar, não quero
+let idx=0;
 
-Remover ingrediente sem alterar preço base (exceto regra manual futura).
+while((idx=txt.indexOf(nome,idx))!==-1){
 
-========================
-🥤 BEBIDAS
-========================
+let qtd=acharQtd(txt,idx);
 
-Normalizar:
-coca → coca lata
-coca grande → coca 2L
-2 coca → 2 coca lata
+let item={
+nome,
+qtd,
+preco,
+adds:[],
+rems:[],
+subtotal:0
+};
 
-Separar bebidas do bloco de lanches.
+let subtotalBase=preco*qtd;
+let subtotalAdds=0;
 
-========================
-📍 ENDEREÇO INTELIGENTE
-========================
+for(let add in adicionais){
 
-Detectar automaticamente:
-- rua
-- número
-- bairro
-- referência
+let trecho=txt.substring(idx,idx+45);
 
-Separar endereço do pedido.
+if(trecho.includes("extra "+add)||trecho.includes("+"+add)||trecho.includes("com "+add)){
+item.adds.push(add);
+subtotalAdds+=adicionais[add]*qtd;
+}
 
-Se cliente escrever endereço quebrado → reconstruir.
+if(trecho.includes("sem "+add)||trecho.includes("tirar "+add)){
+item.rems.push(add);
+}
+}
 
-========================
-🚚 ENTREGA INTELIGENTE
-========================
+item.subtotal=subtotalBase+subtotalAdds;
 
-Regras:
-- retirar → entrega 0
-- entrega → taxa padrão 7
-- entrega X → valor personalizado
-- permitir edição manual
+itens.push(item);
+total+=item.subtotal;
 
-========================
-🧮 CÁLCULO PROFISSIONAL
-========================
+idx+=nome.length;
+}
+}
 
-Para cada item:
+render();
+}
 
-subtotal_item = (preço base + adicionais) × quantidade
+function render(){
 
-Somar:
-- itens
-- bebidas
-- entrega
+let html="";
 
-Nunca:
-- duplicar item
-- multiplicar adicional separado
-- somar item removido
-- gerar total absurdo
+itens.forEach(i=>{
 
-Prioridade máxima: TOTAL CORRETO.
+html+=`<div>${i.qtd}x ${i.nome}
+<div class="linhaPreco">Subtotal R$ ${i.subtotal}</div>`;
 
-========================
-🖨️ IMPRESSÃO TÉRMICA 58MM
-========================
+i.adds.forEach(a=>{
+let v=adicionais[a]*i.qtd;
+html+=`<div class="add">+ ${a} R$ ${v}</div>`;
+});
 
-Gerar bloco limpo:
+i.rems.forEach(r=>html+=`<div class="rem">- sem ${r}</div>`);
 
-PEDIDO
-(itens linha por linha)
-ADICIONAIS abaixo do item
-BEBIDAS
-ENTREGA
-TOTAL
-ENDEREÇO
+html+="</div>";
+});
 
-Formato compacto profissional.
-Sem explicações.
-Sem painel.
+pedido.innerHTML=html;
+enderecoEl.innerText=endereco?"Endereço: "+endereco:"";
 
-========================
-🔄 BOTÃO NOVO PEDIDO
-========================
+mostrarTotal();
+}
 
-Quando acionado:
-- limpar pedido
-- limpar endereço
-- limpar entrega
-- limpar total
-- limpar texto colado
+function entrega(){entregaValor=7;mostrarTotal()}
+function entregaCustom(){
+let v=prompt("Valor da entrega:");
+if(v){
+entregaValor=parseFloat(v.replace(",","."));
+mostrarTotal();
+}
+}
+function retirada(){entregaValor=0;mostrarTotal()}
 
-========================
-⭐ MODO CLIENTE FIEL (MEMÓRIA)
-========================
+function mostrarTotal(){
+totalEl.innerText="TOTAL: R$ "+(total+entregaValor);
+}
 
-Se mesmo cliente repetir padrão → reconhecer e sugerir.
+function imprimir(){
 
-Ex:
-“o de sempre”
+let agora=new Date();
 
-========================
-📊 MODO ADMIN (INTERNO)
-========================
+let texto="TALES LANCHES\n";
+texto+="Pedido #"+numeroPedido+"\n";
+texto+=agora.toLocaleString()+"\n";
+texto+="----------------\n\n";
 
-Permitir futuramente:
-- mais vendido
-- ticket médio
-- tempo médio
-- contador de pedidos
+itens.forEach(i=>{
+texto+=`${i.qtd}x ${i.nome}\n`;
+i.adds.forEach(a=>texto+=` + ${a}\n`);
+i.rems.forEach(r=>texto+=` - sem ${r}\n`);
+texto+="\n";
+});
 
-(sem exibir ao cliente)
+texto+="----------------\n";
 
-========================
-🧠 REGRA DE OURO
-========================
+if(entregaValor>0) texto+=`Entrega: R$ ${entregaValor}\n`;
 
-Você é uma IA de caixa profissional.
+texto+=`\nTOTAL: R$ ${total+entregaValor}\n\n`;
 
-Objetivo:
-interpretar rápido
-organizar bonito
-calcular perfeito
-imprimir pronto
+if(endereco) texto+="Endereço:\n"+endereco+"\n";
 
-Nunca errar valores.
-Nunca duplicar.
-Sempre estruturar.
+let w=window.open("","","width=300,height=600");
+w.document.write("<pre style='font-size:14px'>"+texto+"</pre>");
+w.print();
+w.close();
+
+numeroPedido++;
+}
+</script>
+
+</body>
+</html>
