@@ -1,1 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Painel Tales</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{font-family:Arial;background:#f5f5f5;padding:20px}
+.box{max-width:720px;margin:auto;background:#fff;padding:20px;border-radius:10px}
+textarea{width:100%;height:120px;padding:10px;margin-bottom:10px}
+button{padding:10px 15px;font-size:16px;cursor:pointer}
+.item{display:flex;justify-content:space-between;margin:4px 0}
+.total{font-size:20px;font-weight:bold;margin-top:10px}
+</style>
+</head>
+<body>
 
+<div class="box">
+<h2>Painel Tales</h2>
+
+<textarea id="msg" placeholder="Cole a mensagem do cliente"></textarea>
+<button onclick="interpretar()">Interpretar pedido</button>
+
+<div id="lista"></div>
+<div id="total" class="total"></div>
+</div>
+
+<script>
+const cardapio={
+// Lanches
+"americano":29,"acebolado":28,"azeitonado":27,"bacon":30,"bacon catupiry":35,
+"burgão":24,"burgão bacon":32,"burguer":22,"catupiry":35,"cheddar":27,
+"salada":24,"salada bacon":31,"milho":26,"tudo":37,"da casa":40,
+
+// Frango
+"frango":28,"frango catupiry":34,"frango bacon":34,"frango bacon catupiry":38,
+"frango cheddar":34,"frango tudo":37,
+
+// Especiais
+"bauru":35,"misto":22,"calabresa":29,"vegetariano":25,"brocolis":29,"bauru acebolado":37,
+
+// Bebidas
+"coca lata":7,"fanta laranja":7,"fanta uva":7,"sprite":7,"guarana":7,
+"coca 2l":15,"sprite 2l":15,"fanta 2l":15,"coca 1l":9,"guarana 2l":15,"guarana 1l":9,"del vale":8,
+
+// Adicionais
+"add bacon":7,"add catupiry":7,"alface":2,"add queijo":7,"ovo":2,"add hamburguer":8,
+"add milho":2,"azeitona":2,"maionese caseira":1,"cebola":2
+};
+
+function interpretar(){
+const txt=document.getElementById("msg").value.toLowerCase();
+
+let total=0;
+let lista=document.getElementById("lista");
+lista.innerHTML="";
+
+for(const nome in cardapio){
+let regex=new RegExp("(\\d+)\\s*"+nome);
+let match=txt.match(regex);
+
+if(match){
+let q=parseInt(match[1]);
+let preco=cardapio[nome]*q;
+total+=preco;
+
+lista.innerHTML+=`
+<div class="item">
+<span>${q}x ${nome}</span>
+<span>R$ ${preco}</span>
+</div>`;
+}
+}
+
+document.getElementById("total").innerHTML="Total: R$ "+total;
+}
+</script>
+
+</body>
+</html>
