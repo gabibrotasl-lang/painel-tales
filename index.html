@@ -41,6 +41,25 @@ button{
   white-space:pre-line;
   font-size:14px;
 }
+
+/* 🔥 MODO IMPRESSÃO — só pedido */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #print, #print * {
+    visibility: visible;
+  }
+
+  #print{
+    position:absolute;
+    left:0;
+    top:0;
+    width:100%;
+    font-size:13px;
+  }
+}
 </style>
 </head>
 
