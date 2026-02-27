@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Painel Tales</title>
+<title>Painel Tales IA HARD</title>
 
 <style>
 body{font-family:Arial;background:#0f0f0f;color:#fff;padding:20px}
@@ -11,6 +11,8 @@ textarea{width:100%;height:120px;border-radius:10px;padding:10px;font-size:16px}
 button{background:#ff7a00;border:none;padding:12px 20px;border-radius:10px;font-weight:bold;margin:5px;cursor:pointer}
 .card{background:#1a1a1a;padding:15px;border-radius:12px;margin-top:15px}
 .total{font-size:22px;color:#ff7a00;font-weight:bold}
+.add{color:#7CFC00}
+.rem{color:#aaa}
 .small{color:#aaa;font-size:13px}
 </style>
 </head>
@@ -23,7 +25,7 @@ button{background:#ff7a00;border:none;padding:12px 20px;border-radius:10px;font-
 <h3>Mensagem cliente</h3>
 <textarea id="msg"></textarea><br>
 <button onclick="colar()">📋 Colar</button>
-<button onclick="processar()">🤖 Processar</button>
+<button onclick="processar()">🤖 Processar IA</button>
 <button onclick="entrega()">🚚 Entrega +7</button>
 <button onclick="retirada()">🏠 Retirada</button>
 <button onclick="imprimir()">🧾 Imprimir 58mm</button>
@@ -32,19 +34,50 @@ button{background:#ff7a00;border:none;padding:12px 20px;border-radius:10px;font-
 <div class="card">
 <h3>Pedido</h3>
 <div id="pedido"></div>
-<div class="small" id="endereco"></div>
-<div class="total" id="total"></div>
+<div id="endereco" class="small"></div>
+<div id="total" class="total"></div>
 </div>
 
 <script>
-const cardapio={
-"americano":29,"acebolado":28,"azeitonado":27,"bacon catupiry":35,"bacon":30,
-"burgão bacon":32,"burgão":24,"burguer":22,"catupiry":35,"cheddar":27,
-"salada bacon":31,"salada":24,"milho":26,"tudo":37,"da casa":40,
-"frango bacon catupiry":38,"frango bacon":34,"frango catupiry":34,"frango cheddar":34,"frango tudo":37,"frango":28,
-"bauru acebolado":37,"bauru":35,"misto":22,"calabresa":29,"vegetariano":25,"brocolis":29,
-"coca 2l":15,"coca 1l":9,"coca lata":7,"fanta laranja":7,"fanta uva":7,"sprite":7,"guarana":7,"guarana 2l":15,"guarana 1l":9,"dell vale":8
-};
+const cardapio=[
+["frango bacon catupiry",38],
+["frango bacon",34],
+["frango catupiry",34],
+["frango cheddar",34],
+["frango tudo",37],
+["da casa",40],
+["bacon catupiry",35],
+["burgão bacon",32],
+["salada bacon",31],
+["bauru acebolado",37],
+["americano",29],
+["acebolado",28],
+["azeitonado",27],
+["bacon",30],
+["burgão",24],
+["burguer",22],
+["catupiry",35],
+["cheddar",27],
+["salada",24],
+["milho",26],
+["tudo",37],
+["frango",28],
+["bauru",35],
+["misto",22],
+["calabresa",29],
+["vegetariano",25],
+["brocolis",29],
+["coca 2l",15],
+["coca 1l",9],
+["coca lata",7],
+["fanta laranja",7],
+["fanta uva",7],
+["sprite",7],
+["guarana 2l",15],
+["guarana 1l",9],
+["guarana",7],
+["dell vale",8]
+];
 
 const adicionais={"bacon":7,"catupiry":7,"alface":2,"queijo":7,"ovo":2,"hamburguer":6,"milho":2,"azeitona":2,"maionese":1,"cebola":2,"frango":6};
 
@@ -58,46 +91,63 @@ function colar(){navigator.clipboard.readText().then(t=>msg.value=t)}
 function detectarEndereco(txt){
 let linhas=txt.split("\n");
 for(let l of linhas){
-if(l.includes("rua")||l.includes("av")||l.match(/\d{2,}/)){return l}
+if(l.match(/rua|av|avenida|travessa/i)&&l.match(/\d+/)) return l;
 }
 return "";
 }
 
-function processar(){
-itens=[];
-total=0;
+function acharQtd(txt,pos){
+let antes=txt.substring(Math.max(0,pos-6),pos);
+let m=antes.match(/(\d+)/);
+return m?parseInt(m[1]):1;
+}
 
+function processar(){
+itens=[];total=0;
 let txt=msg.value.toLowerCase();
 endereco=detectarEndereco(txt);
 
-for(let nome in cardapio){
-let regex=new RegExp("(\\d+)?\\s*"+nome,"g");
-let m;
-while((m=regex.exec(txt))!==null){
-let qtd=parseInt(m[1])||1;
-itens.push({nome,qtd,valor:cardapio[nome]});
-total+=cardapio[nome]*qtd;
+for(let [nome,preco] of cardapio){
+let idx=0;
+while((idx=txt.indexOf(nome,idx))!==-1){
+let qtd=acharQtd(txt,idx);
+let item={nome,qtd,preco,adds:[],rems:[]};
+
+for(let add in adicionais){
+let trecho=txt.substring(idx,idx+40);
+if(trecho.includes("extra "+add)||trecho.includes("+"+add)||trecho.includes("com "+add)){
+item.adds.push(add);
+total+=adicionais[add]*qtd;
+}
+if(trecho.includes("sem "+add)||trecho.includes("tirar "+add)){
+item.rems.push(add);
 }
 }
 
+itens.push(item);
+total+=preco*qtd;
+idx+=nome.length;
+}
+}
 render();
 }
 
 function render(){
 let html="";
 for(let i of itens){
-html+=`<div>${i.qtd}x ${i.nome}</div>`;
+html+=`<div>${i.qtd}x ${i.nome}`;
+i.adds.forEach(a=>html+=`<div class="add">+ ${a}</div>`);
+i.rems.forEach(r=>html+=`<div class="rem">- sem ${r}</div>`);
+html+="</div>";
 }
 pedido.innerHTML=html;
-enderecoDiv.innerText=endereco?"Endereço: "+endereco:"";
+enderecoEl.innerText=endereco?"Endereço: "+endereco:"";
 mostrarTotal();
 }
 
 function entrega(){entregaValor=7;mostrarTotal()}
 function retirada(){entregaValor=0;mostrarTotal()}
-
 function mostrarTotal(){totalEl.innerText="TOTAL: R$ "+(total+entregaValor)}
-
 function imprimir(){window.print()}
 </script>
 
