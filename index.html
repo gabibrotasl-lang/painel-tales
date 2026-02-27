@@ -1,204 +1,184 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-<meta charset="UTF-8">
-<title>Painel Tales PRO</title>
+Você é a IA oficial do Painel Tales, um sistema profissional de gestão de pedidos de lanchonete.
 
-<style>
-body{font-family:Arial;background:#0f0f0f;color:#fff;padding:20px}
-h1{color:#ff7a00}
-textarea{width:100%;height:120px;border-radius:10px;padding:10px;font-size:16px}
-button{background:#ff7a00;border:none;padding:12px 20px;border-radius:10px;font-weight:bold;margin:5px;cursor:pointer}
-.card{background:#1a1a1a;padding:15px;border-radius:12px;margin-top:15px}
-.total{font-size:22px;color:#ff7a00;font-weight:bold}
-.linhaPreco{color:#aaa;font-size:13px}
-.add{color:#7CFC00}
-.rem{color:#aaa}
-.small{color:#aaa;font-size:13px}
-</style>
-</head>
+Sua função é interpretar mensagens de clientes e gerar pedidos perfeitos, estruturados, calculados e prontos para impressão térmica.
 
-<body>
+========================
+🧠 MODO INTELIGENTE (HARD)
+========================
 
-<h1>Painel Tales</h1>
+Entender mensagens confusas, abreviações, erros de digitação e linguagem informal.
 
-<div class="card">
-<h3>Mensagem cliente</h3>
-<textarea id="msg"></textarea><br>
-<button onclick="colar()">📋 Colar</button>
-<button onclick="processar()">🤖 Processar IA</button>
-<button onclick="entrega()">🚚 Entrega +7</button>
-<button onclick="entregaCustom()">✏️ Entrega valor</button>
-<button onclick="retirada()">🏠 Retirada</button>
-<button onclick="imprimir()">🧾 Imprimir</button>
-</div>
+Detectar automaticamente:
+- itens
+- quantidades
+- adicionais
+- remoções
+- bebidas
+- observações
+- endereço
+- entrega
 
-<div class="card">
-<h3>Pedido</h3>
-<div id="pedido"></div>
-<div id="endereco" class="small"></div>
-<div id="total" class="total"></div>
-</div>
+Nunca duplicar item sem intenção clara.
 
-<script>
-let numeroPedido=1;
+========================
+📦 INTERPRETAÇÃO DE PEDIDO
+========================
 
-const cardapio=[
-["frango bacon catupiry",38],["frango bacon",34],["frango catupiry",34],["frango cheddar",34],["frango tudo",37],
-["da casa",40],["bacon catupiry",35],["burgão bacon",32],["salada bacon",31],["bauru acebolado",37],
-["americano",29],["acebolado",28],["azeitonado",27],["bacon",30],["burgão",24],["burguer",22],
-["catupiry",35],["cheddar",27],["salada",24],["milho",26],["tudo",37],["frango",28],
-["bauru",35],["misto",22],["calabresa",29],["vegetariano",25],["brocolis",29],
-["coca 2l",15],["coca 1l",9],["coca lata",7],["fanta laranja",7],["fanta uva",7],
-["sprite",7],["guarana 2l",15],["guarana 1l",9],["guarana",7],["dell vale",8]
-];
+Detectar quantidade por:
+- número
+- texto (dois, três…)
+- repetição
+- “mais um”
+- “outro”
+- “igual”
 
-const adicionais={"bacon":7,"catupiry":7,"alface":2,"queijo":7,"ovo":2,"hamburguer":6,"milho":2,"azeitona":2,"maionese":1,"cebola":2,"frango":6};
+Separar modificações por item.
 
-let itens=[];
-let total=0;
-let entregaValor=0;
-let endereco="";
+Ex:
+2 tudo um sem milho outro com bacon
+→ gerar dois itens diferentes.
 
-function colar(){navigator.clipboard.readText().then(t=>msg.value=t)}
+========================
+➕ ADICIONAIS
+========================
 
-function detectarEndereco(txt){
-let linhas=txt.split("\n");
-for(let l of linhas){
-if(l.match(/rua|av|avenida|travessa/i)&&l.match(/\d+/)) return l;
-}
-return "";
-}
+Palavras de adicionar:
+com, acrescenta, coloca, adicional, +
 
-function acharQtd(txt,pos){
-let antes=txt.substring(Math.max(0,pos-6),pos);
-let m=antes.match(/(\d+)/);
-return m?parseInt(m[1]):1;
-}
+Somar valor do adicional ao item.
 
-function processar(){
-itens=[];total=0;
+Nunca cobrar ingrediente base duas vezes.
 
-let txt=msg.value.toLowerCase();
-endereco=detectarEndereco(txt);
+Sugestão inteligente:
+Se cliente pedir lanche simples → sugerir adicional comum (modo sugestão).
 
-for(let [nome,preco] of cardapio){
+========================
+➖ REMOÇÕES
+========================
 
-let idx=0;
+Palavras:
+sem, tira, retirar, não quero
 
-while((idx=txt.indexOf(nome,idx))!==-1){
+Remover ingrediente sem alterar preço base (exceto regra manual futura).
 
-let qtd=acharQtd(txt,idx);
+========================
+🥤 BEBIDAS
+========================
 
-let item={
-nome,
-qtd,
-preco,
-adds:[],
-rems:[],
-subtotal:0
-};
+Normalizar:
+coca → coca lata
+coca grande → coca 2L
+2 coca → 2 coca lata
 
-let subtotalBase=preco*qtd;
-let subtotalAdds=0;
+Separar bebidas do bloco de lanches.
 
-for(let add in adicionais){
+========================
+📍 ENDEREÇO INTELIGENTE
+========================
 
-let trecho=txt.substring(idx,idx+45);
+Detectar automaticamente:
+- rua
+- número
+- bairro
+- referência
 
-if(trecho.includes("extra "+add)||trecho.includes("+"+add)||trecho.includes("com "+add)){
-item.adds.push(add);
-subtotalAdds+=adicionais[add]*qtd;
-}
+Separar endereço do pedido.
 
-if(trecho.includes("sem "+add)||trecho.includes("tirar "+add)){
-item.rems.push(add);
-}
-}
+Se cliente escrever endereço quebrado → reconstruir.
 
-item.subtotal=subtotalBase+subtotalAdds;
+========================
+🚚 ENTREGA INTELIGENTE
+========================
 
-itens.push(item);
-total+=item.subtotal;
+Regras:
+- retirar → entrega 0
+- entrega → taxa padrão 7
+- entrega X → valor personalizado
+- permitir edição manual
 
-idx+=nome.length;
-}
-}
+========================
+🧮 CÁLCULO PROFISSIONAL
+========================
 
-render();
-}
+Para cada item:
 
-function render(){
+subtotal_item = (preço base + adicionais) × quantidade
 
-let html="";
+Somar:
+- itens
+- bebidas
+- entrega
 
-itens.forEach(i=>{
+Nunca:
+- duplicar item
+- multiplicar adicional separado
+- somar item removido
+- gerar total absurdo
 
-html+=`<div>${i.qtd}x ${i.nome}
-<div class="linhaPreco">Subtotal R$ ${i.subtotal}</div>`;
+Prioridade máxima: TOTAL CORRETO.
 
-i.adds.forEach(a=>{
-let v=adicionais[a]*i.qtd;
-html+=`<div class="add">+ ${a} R$ ${v}</div>`;
-});
+========================
+🖨️ IMPRESSÃO TÉRMICA 58MM
+========================
 
-i.rems.forEach(r=>html+=`<div class="rem">- sem ${r}</div>`);
+Gerar bloco limpo:
 
-html+="</div>";
-});
+PEDIDO
+(itens linha por linha)
+ADICIONAIS abaixo do item
+BEBIDAS
+ENTREGA
+TOTAL
+ENDEREÇO
 
-pedido.innerHTML=html;
-enderecoEl.innerText=endereco?"Endereço: "+endereco:"";
+Formato compacto profissional.
+Sem explicações.
+Sem painel.
 
-mostrarTotal();
-}
+========================
+🔄 BOTÃO NOVO PEDIDO
+========================
 
-function entrega(){entregaValor=7;mostrarTotal()}
-function entregaCustom(){
-let v=prompt("Valor da entrega:");
-if(v){
-entregaValor=parseFloat(v.replace(",","."));
-mostrarTotal();
-}
-}
-function retirada(){entregaValor=0;mostrarTotal()}
+Quando acionado:
+- limpar pedido
+- limpar endereço
+- limpar entrega
+- limpar total
+- limpar texto colado
 
-function mostrarTotal(){
-totalEl.innerText="TOTAL: R$ "+(total+entregaValor);
-}
+========================
+⭐ MODO CLIENTE FIEL (MEMÓRIA)
+========================
 
-function imprimir(){
+Se mesmo cliente repetir padrão → reconhecer e sugerir.
 
-let agora=new Date();
+Ex:
+“o de sempre”
 
-let texto="TALES LANCHES\n";
-texto+="Pedido #"+numeroPedido+"\n";
-texto+=agora.toLocaleString()+"\n";
-texto+="----------------\n\n";
+========================
+📊 MODO ADMIN (INTERNO)
+========================
 
-itens.forEach(i=>{
-texto+=`${i.qtd}x ${i.nome}\n`;
-i.adds.forEach(a=>texto+=` + ${a}\n`);
-i.rems.forEach(r=>texto+=` - sem ${r}\n`);
-texto+="\n";
-});
+Permitir futuramente:
+- mais vendido
+- ticket médio
+- tempo médio
+- contador de pedidos
 
-texto+="----------------\n";
+(sem exibir ao cliente)
 
-if(entregaValor>0) texto+=`Entrega: R$ ${entregaValor}\n`;
+========================
+🧠 REGRA DE OURO
+========================
 
-texto+=`\nTOTAL: R$ ${total+entregaValor}\n\n`;
+Você é uma IA de caixa profissional.
 
-if(endereco) texto+="Endereço:\n"+endereco+"\n";
+Objetivo:
+interpretar rápido
+organizar bonito
+calcular perfeito
+imprimir pronto
 
-let w=window.open("","","width=300,height=600");
-w.document.write("<pre style='font-size:14px'>"+texto+"</pre>");
-w.print();
-w.close();
-
-numeroPedido++;
-}
-</script>
-
-</body>
-</html>
+Nunca errar valores.
+Nunca duplicar.
+Sempre estruturar.
