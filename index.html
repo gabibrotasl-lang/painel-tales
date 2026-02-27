@@ -1,247 +1,100 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>Painel Tales</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body{
-  font-family: Arial;
-  background:#f2f2f2;
-  padding:20px;
-}
-
-.container{
-  max-width:900px;
-  margin:auto;
-  background:white;
-  padding:25px;
-  border-radius:12px;
-  box-shadow:0 5px 15px rgba(0,0,0,0.1);
-}
-
-h1{
-  text-align:center;
-}
-
-textarea{
-  width:100%;
-  height:120px;
-  padding:10px;
-  margin-bottom:10px;
-  font-size:16px;
-}
-
-button{
-  padding:10px 15px;
-  font-size:15px;
-  cursor:pointer;
-  border:none;
-  border-radius:6px;
-}
-
-.btn-primary{
-  background:#007bff;
-  color:white;
-}
-
-.btn-secondary{
-  background:#28a745;
-  color:white;
-}
-
-.btn-danger{
-  background:#dc3545;
-  color:white;
-}
-
-.item{
-  display:flex;
-  justify-content:space-between;
-  margin:5px 0;
-}
-
-.total{
-  font-size:22px;
-  font-weight:bold;
-  margin-top:15px;
-}
-
-.entrega-box{
-  margin-top:15px;
-  padding:10px;
-  background:#f9f9f9;
-  border-radius:8px;
-}
+body{font-family:Arial;background:#0f0f0f;color:white;padding:20px}
+h1{color:#ff7a00}
+textarea{width:100%;height:120px;border-radius:10px;padding:10px;font-size:16px}
+button{background:#ff7a00;border:none;padding:12px 20px;border-radius:10px;font-weight:bold;cursor:pointer;margin:5px}
+.card{background:#1a1a1a;padding:15px;border-radius:12px;margin-top:15px}
+.total{font-size:22px;color:#ff7a00;font-weight:bold}
+.add{color:#7CFC00}
+.rem{color:#aaa}
 </style>
 </head>
 
 <body>
 
-<div class="container">
 <h1>Painel Tales</h1>
 
-<textarea id="msg" placeholder="Cole a mensagem do cliente aqui..."></textarea>
-
-<button class="btn-primary" onclick="interpretar()">Interpretar Pedido</button>
-
-<hr>
-
-<h3>Pedido #<span id="numeroPedido">1</span></h3>
-
-<div id="lista"></div>
-
-<div class="entrega-box">
-<label>
-<input type="checkbox" id="entregaCheck" onchange="atualizarEntrega()">
- Entrega (R$ 7,00 padrão)
-</label>
-
-<br><br>
-
-<label>
-Valor personalizado da entrega:
-<input type="number" id="valorEntrega" placeholder="Ex: 10" oninput="atualizarEntrega()">
-</label>
+<div class="card">
+<h3>Mensagem cliente</h3>
+<textarea id="msg"></textarea><br>
+<button onclick="processar()">🤖 Processar</button>
+<button onclick="entrega()">🚚 Entrega +7</button>
+<button onclick="retirada()">🏠 Retirada</button>
 </div>
 
-<div class="total" id="total">Total: R$ 0</div>
-
-<br>
-
-<button class="btn-secondary" onclick="imprimir()">Imprimir 58mm</button>
-<button class="btn-danger" onclick="novoPedido()">Novo Pedido</button>
-
+<div class="card">
+<h3>Pedido</h3>
+<div id="pedido"></div>
+<div class="total" id="total"></div>
 </div>
 
 <script>
+const cardapio={
+"americano":29,"acebolado":28,"azeitonado":27,"bacon catupiry":35,"bacon":30,
+"burgão bacon":32,"burgão":24,"burguer":22,"catupiry":35,"cheddar":27,
+"salada bacon":31,"salada":24,"milho":26,"tudo":37,"da casa":40,
+"frango bacon catupiry":38,"frango bacon":34,"frango catupiry":34,"frango cheddar":34,"frango tudo":37,"frango":28,
+"bauru acebolado":37,"bauru":35,"misto":22,"calabresa":29,"vegetariano":25,"brocolis":29,
+"coca 2l":15,"coca 1l":9,"coca lata":7,"fanta laranja":7,"fanta uva":7,"sprite":7,"guarana":7,"guarana 2l":15,"guarana 1l":9,"dell vale":8
+};
 
-let pedidoNumero=1;
-let subtotal=0;
-let taxaEntrega=0;
+const adicionais={
+"bacon":7,"catupiry":7,"alface":2,"queijo":7,"ovo":2,"hamburguer":6,"milho":2,"azeitona":2,"maionese":1,"cebola":2,"frango":6
+};
 
-const itensLista=[
-["frango bacon catupiry",38],
-["frango bacon",34],
-["frango catupiry",34],
-["frango cheddar",34],
-["frango tudo",37],
-["frango",28],
-["burgão bacon",32],
-["bacon catupiry",35],
-["salada bacon",31],
-["burgão",24],
-["americano",29],
-["acebolado",28],
-["azeitonado",27],
-["bacon",30],
-["burguer",22],
-["catupiry",35],
-["cheddar",27],
-["salada",24],
-["milho",26],
-["tudo",37],
-["da casa",40],
-["bauru acebolado",37],
-["bauru",35],
-["misto",22],
-["calabresa",29],
-["vegetariano",25],
-["brocolis",29],
-["coca 2l",15],
-["coca 2 litros",15],
-["coca lata",7],
-["fanta laranja",7],
-["fanta uva",7],
-["sprite 2l",15],
-["sprite",7],
-["guarana 2l",15],
-["guarana 1l",9],
-["guarana",7],
-["del vale",8]
-];
+let totalValor=0;
+let entregaValor=0;
 
-itensLista.sort((a,b)=>b[0].length-a[0].length);
-
-function normalizar(txt){
-return txt
-.toLowerCase()
-.replaceAll("uma","1")
-.replaceAll("um","1")
-.replaceAll("dois","2")
-.replaceAll("tres","3")
-.replaceAll("litros","l");
+function getQtd(txt,item){
+let r=txt.match(new RegExp("(\\d+)\\s*"+item));
+return r?parseInt(r[1]):1;
 }
 
-function interpretar(){
-let txt=normalizar(document.getElementById("msg").value);
+function processar(){
+totalValor=0;
+let txt=document.getElementById("msg").value.toLowerCase();
+let html="";
 
-subtotal=0;
-document.getElementById("lista").innerHTML="";
+for(let item in cardapio){
+if(txt.includes(item)){
+let qtd=getQtd(txt,item);
+let valor=cardapio[item]*qtd;
+totalValor+=valor;
 
-itensLista.forEach(([nome,preco])=>{
-let regex=new RegExp("(\\d+)\\s*"+nome,"g");
-let match;
+let linha=`<div>${qtd}x ${item} — R$ ${valor}`;
 
-while((match=regex.exec(txt))!==null){
-let q=parseInt(match[1]);
-let soma=q*preco;
-subtotal+=soma;
-
-document.getElementById("lista").innerHTML+=`
-<div class="item">
-<span>${q}x ${nome}</span>
-<span>R$ ${soma}</span>
-</div>`;
-
-txt=txt.replace(match[0],"");
+for(let add in adicionais){
+if(txt.includes("extra "+add)||txt.includes("com "+add)||txt.includes("+"+add)){
+let v=adicionais[add]*qtd;
+totalValor+=v;
+linha+=`<div class='add'>+ ${add} R$ ${v}</div>`;
 }
-});
-
-detectarTipo(txt);
-atualizarTotal();
-}
-
-function detectarTipo(txt){
-if(txt.includes("entrega") || txt.includes("delivery") || txt.includes("traz")){
-document.getElementById("entregaCheck").checked=true;
-}else if(txt.includes("retirada") || txt.includes("buscar")){
-document.getElementById("entregaCheck").checked=false;
+if(txt.includes("sem "+add)||txt.includes("tirar "+add)){
+linha+=`<div class='rem'>- sem ${add}</div>`;
 }
 }
 
-function atualizarEntrega(){
-if(document.getElementById("entregaCheck").checked){
-let personalizado=document.getElementById("valorEntrega").value;
-taxaEntrega=personalizado?parseFloat(personalizado):7;
-}else{
-taxaEntrega=0;
+linha+="</div>";
+html+=linha;
 }
-atualizarTotal();
 }
 
-function atualizarTotal(){
-let total=subtotal+taxaEntrega;
-document.getElementById("total").innerHTML="Total: R$ "+total.toFixed(2);
+document.getElementById("pedido").innerHTML=html;
+mostrarTotal();
 }
 
-function novoPedido(){
-pedidoNumero++;
-document.getElementById("numeroPedido").innerText=pedidoNumero;
-document.getElementById("msg").value="";
-document.getElementById("lista").innerHTML="";
-document.getElementById("total").innerHTML="Total: R$ 0";
-document.getElementById("entregaCheck").checked=false;
-document.getElementById("valorEntrega").value="";
-subtotal=0;
-taxaEntrega=0;
-}
+function entrega(){entregaValor=7;mostrarTotal();}
+function retirada(){entregaValor=0;mostrarTotal();}
 
-function imprimir(){
-window.print();
+function mostrarTotal(){
+document.getElementById("total").innerText="TOTAL: R$ "+(totalValor+entregaValor);
 }
-
 </script>
 
 </body>
