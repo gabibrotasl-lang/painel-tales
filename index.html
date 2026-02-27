@@ -1,18 +1,17 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <title>Painel Tales</title>
 
 <style>
-body{font-family:Arial;background:#0f0f0f;color:white;padding:20px}
+body{font-family:Arial;background:#0f0f0f;color:#fff;padding:20px}
 h1{color:#ff7a00}
 textarea{width:100%;height:120px;border-radius:10px;padding:10px;font-size:16px}
-button{background:#ff7a00;border:none;padding:12px 20px;border-radius:10px;font-weight:bold;cursor:pointer;margin:5px}
+button{background:#ff7a00;border:none;padding:12px 20px;border-radius:10px;font-weight:bold;margin:5px;cursor:pointer}
 .card{background:#1a1a1a;padding:15px;border-radius:12px;margin-top:15px}
 .total{font-size:22px;color:#ff7a00;font-weight:bold}
-.add{color:#7CFC00}
-.rem{color:#aaa}
+.small{color:#aaa;font-size:13px}
 </style>
 </head>
 
@@ -23,14 +22,17 @@ button{background:#ff7a00;border:none;padding:12px 20px;border-radius:10px;font-
 <div class="card">
 <h3>Mensagem cliente</h3>
 <textarea id="msg"></textarea><br>
+<button onclick="colar()">📋 Colar</button>
 <button onclick="processar()">🤖 Processar</button>
 <button onclick="entrega()">🚚 Entrega +7</button>
 <button onclick="retirada()">🏠 Retirada</button>
+<button onclick="imprimir()">🧾 Imprimir 58mm</button>
 </div>
 
 <div class="card">
 <h3>Pedido</h3>
 <div id="pedido"></div>
+<div class="small" id="endereco"></div>
 <div class="total" id="total"></div>
 </div>
 
@@ -44,57 +46,59 @@ const cardapio={
 "coca 2l":15,"coca 1l":9,"coca lata":7,"fanta laranja":7,"fanta uva":7,"sprite":7,"guarana":7,"guarana 2l":15,"guarana 1l":9,"dell vale":8
 };
 
-const adicionais={
-"bacon":7,"catupiry":7,"alface":2,"queijo":7,"ovo":2,"hamburguer":6,"milho":2,"azeitona":2,"maionese":1,"cebola":2,"frango":6
-};
+const adicionais={"bacon":7,"catupiry":7,"alface":2,"queijo":7,"ovo":2,"hamburguer":6,"milho":2,"azeitona":2,"maionese":1,"cebola":2,"frango":6};
 
-let totalValor=0;
+let itens=[];
+let total=0;
 let entregaValor=0;
+let endereco="";
 
-function getQtd(txt,item){
-let r=txt.match(new RegExp("(\\d+)\\s*"+item));
-return r?parseInt(r[1]):1;
+function colar(){navigator.clipboard.readText().then(t=>msg.value=t)}
+
+function detectarEndereco(txt){
+let linhas=txt.split("\n");
+for(let l of linhas){
+if(l.includes("rua")||l.includes("av")||l.match(/\d{2,}/)){return l}
+}
+return "";
 }
 
 function processar(){
-totalValor=0;
-let txt=document.getElementById("msg").value.toLowerCase();
+itens=[];
+total=0;
+
+let txt=msg.value.toLowerCase();
+endereco=detectarEndereco(txt);
+
+for(let nome in cardapio){
+let regex=new RegExp("(\\d+)?\\s*"+nome,"g");
+let m;
+while((m=regex.exec(txt))!==null){
+let qtd=parseInt(m[1])||1;
+itens.push({nome,qtd,valor:cardapio[nome]});
+total+=cardapio[nome]*qtd;
+}
+}
+
+render();
+}
+
+function render(){
 let html="";
-
-for(let item in cardapio){
-if(txt.includes(item)){
-let qtd=getQtd(txt,item);
-let valor=cardapio[item]*qtd;
-totalValor+=valor;
-
-let linha=`<div>${qtd}x ${item} — R$ ${valor}`;
-
-for(let add in adicionais){
-if(txt.includes("extra "+add)||txt.includes("com "+add)||txt.includes("+"+add)){
-let v=adicionais[add]*qtd;
-totalValor+=v;
-linha+=`<div class='add'>+ ${add} R$ ${v}</div>`;
+for(let i of itens){
+html+=`<div>${i.qtd}x ${i.nome}</div>`;
 }
-if(txt.includes("sem "+add)||txt.includes("tirar "+add)){
-linha+=`<div class='rem'>- sem ${add}</div>`;
-}
-}
-
-linha+="</div>";
-html+=linha;
-}
-}
-
-document.getElementById("pedido").innerHTML=html;
+pedido.innerHTML=html;
+enderecoDiv.innerText=endereco?"Endereço: "+endereco:"";
 mostrarTotal();
 }
 
-function entrega(){entregaValor=7;mostrarTotal();}
-function retirada(){entregaValor=0;mostrarTotal();}
+function entrega(){entregaValor=7;mostrarTotal()}
+function retirada(){entregaValor=0;mostrarTotal()}
 
-function mostrarTotal(){
-document.getElementById("total").innerText="TOTAL: R$ "+(totalValor+entregaValor);
-}
+function mostrarTotal(){totalEl.innerText="TOTAL: R$ "+(total+entregaValor)}
+
+function imprimir(){window.print()}
 </script>
 
 </body>
