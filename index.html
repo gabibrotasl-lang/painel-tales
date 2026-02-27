@@ -28,6 +28,7 @@ button{background:#ff7a00;border:none;padding:12px 20px;border-radius:10px;font-
 <button onclick="colar()">📋 Colar</button>
 <button onclick="processar()">🤖 Processar IA</button>
 <button onclick="entrega()">🚚 Entrega +7</button>
+<button onclick="entregaCustom()">✏️ Entrega valor</button>
 <button onclick="retirada()">🏠 Retirada</button>
 <button onclick="imprimir()">🧾 Imprimir</button>
 </div>
@@ -77,52 +78,89 @@ return m?parseInt(m[1]):1;
 
 function processar(){
 itens=[];total=0;
+
 let txt=msg.value.toLowerCase();
 endereco=detectarEndereco(txt);
 
 for(let [nome,preco] of cardapio){
+
 let idx=0;
+
 while((idx=txt.indexOf(nome,idx))!==-1){
+
 let qtd=acharQtd(txt,idx);
-let item={nome,qtd,preco,adds:[],rems:[]};
+
+let item={
+nome,
+qtd,
+preco,
+adds:[],
+rems:[],
+subtotal:0
+};
+
+let subtotalBase=preco*qtd;
+let subtotalAdds=0;
 
 for(let add in adicionais){
+
 let trecho=txt.substring(idx,idx+45);
+
 if(trecho.includes("extra "+add)||trecho.includes("+"+add)||trecho.includes("com "+add)){
 item.adds.push(add);
-total+=adicionais[add]*qtd;
+subtotalAdds+=adicionais[add]*qtd;
 }
+
 if(trecho.includes("sem "+add)||trecho.includes("tirar "+add)){
 item.rems.push(add);
 }
 }
 
+item.subtotal=subtotalBase+subtotalAdds;
+
 itens.push(item);
-total+=preco*qtd;
+total+=item.subtotal;
+
 idx+=nome.length;
 }
 }
+
 render();
 }
 
 function render(){
+
 let html="";
+
 itens.forEach(i=>{
-let subtotal=i.preco*i.qtd;
-html+=`<div>${i.qtd}x ${i.nome}<div class="linhaPreco">R$ ${subtotal}</div>`;
+
+html+=`<div>${i.qtd}x ${i.nome}
+<div class="linhaPreco">Subtotal R$ ${i.subtotal}</div>`;
+
 i.adds.forEach(a=>{
 let v=adicionais[a]*i.qtd;
 html+=`<div class="add">+ ${a} R$ ${v}</div>`;
 });
+
 i.rems.forEach(r=>html+=`<div class="rem">- sem ${r}</div>`);
+
 html+="</div>";
 });
+
 pedido.innerHTML=html;
 enderecoEl.innerText=endereco?"Endereço: "+endereco:"";
+
 mostrarTotal();
 }
 
 function entrega(){entregaValor=7;mostrarTotal()}
+function entregaCustom(){
+let v=prompt("Valor da entrega:");
+if(v){
+entregaValor=parseFloat(v.replace(",","."));
+mostrarTotal();
+}
+}
 function retirada(){entregaValor=0;mostrarTotal()}
 
 function mostrarTotal(){
@@ -130,7 +168,9 @@ totalEl.innerText="TOTAL: R$ "+(total+entregaValor);
 }
 
 function imprimir(){
+
 let agora=new Date();
+
 let texto="TALES LANCHES\n";
 texto+="Pedido #"+numeroPedido+"\n";
 texto+=agora.toLocaleString()+"\n";
@@ -144,8 +184,11 @@ texto+="\n";
 });
 
 texto+="----------------\n";
+
 if(entregaValor>0) texto+=`Entrega: R$ ${entregaValor}\n`;
+
 texto+=`\nTOTAL: R$ ${total+entregaValor}\n\n`;
+
 if(endereco) texto+="Endereço:\n"+endereco+"\n";
 
 let w=window.open("","","width=300,height=600");
